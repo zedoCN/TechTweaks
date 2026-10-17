@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "pattern": [
+    "SCS",
+    "RHR",
+    "SCS"
+  ],
+  "key": {
+    "S": "hbm:plate_steel",
+    "C": "hbm:circuit_basic",
+    "R": "minecraft:redstone_block",
+    "H": "minecraft:trial_key"
+  },
+  "result": {
+    "id": "tech_tweaks:trial_controller",
+    "count": 1
+  }
+}

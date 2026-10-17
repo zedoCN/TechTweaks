@@ -1,0 +1,56 @@
+{
+  "variants": {
+    "facing=down,powered=false": {
+      "model": "tech_tweaks:block/meteor_guide_rod",
+      "x": 180
+    },
+    "facing=down,powered=true": {
+      "model": "tech_tweaks:block/meteor_guide_rod",
+      "x": 180
+    },
+    "facing=east,powered=false": {
+      "model": "tech_tweaks:block/meteor_guide_rod",
+      "x": 90,
+      "y": 90
+    },
+    "facing=east,powered=true": {
+      "model": "tech_tweaks:block/meteor_guide_rod",
+      "x": 90,
+      "y": 90
+    },
+    "facing=north,powered=false": {
+      "model": "tech_tweaks:block/meteor_guide_rod",
+      "x": 90
+    },
+    "facing=north,powered=true": {
+      "model": "tech_tweaks:block/meteor_guide_rod",
+      "x": 90
+    },
+    "facing=south,powered=false": {
+      "model": "tech_tweaks:block/meteor_guide_rod",
+      "x": 90,
+      "y": 180
+    },
+    "facing=south,powered=true": {
+      "model": "tech_tweaks:block/meteor_guide_rod",
+      "x": 90,
+      "y": 180
+    },
+    "facing=up,powered=false": {
+      "model": "tech_tweaks:block/meteor_guide_rod"
+    },
+    "facing=up,powered=true": {
+      "model": "tech_tweaks:block/meteor_guide_rod"
+    },
+    "facing=west,powered=false": {
+      "model": "tech_tweaks:block/meteor_guide_rod",
+      "x": 90,
+      "y": 270
+    },
+    "facing=west,powered=true": {
+      "model": "tech_tweaks:block/meteor_guide_rod",
+      "x": 90,
+      "y": 270
+    }
+  }
+}

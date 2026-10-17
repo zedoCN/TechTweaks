@@ -1,0 +1,31 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+version = '0.1.3'
+group = 'cn.zedocn.tech'
+base { archivesName = 'tech-tweaks' }
+java { toolchain.languageVersion = JavaLanguageVersion.of(25); withSourcesJar() }
+repositories { mavenCentral() }
+dependencies {
+    implementation fileTree(dir: 'libs', include: '*.jar')
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
+}
+neoForge {
+    enable { version = '26.2.0.88'; disableRecompilation = true }
+    runs {
+        client { client() }
+        server { server(); programArgument '--nogui' }
+        verificationServer {
+            server()
+            gameDirectory = file('runs/performance-verification')
+            programArgument '--nogui'
+            jvmArgument '-Xmx2G'
+        }
+    }
+    mods { tech_tweaks { sourceSet sourceSets.main } }
+}
+neoForge.unitTest { enable(); testedMod = neoForge.mods.tech_tweaks }
+test { useJUnitPlatform() }
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }

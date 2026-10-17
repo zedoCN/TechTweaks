@@ -1,0 +1,33 @@
+modLoader="javafml"
+loaderVersion="[1,)"
+license="All Rights Reserved"
+[[mods]]
+modId="tech_tweaks"
+version="0.1.3"
+displayName="TECH Tweaks"
+authors="zedo"
+description="TECH 服务器的工业自动化与兼容修复"
+[[mixins]]
+config="tech_tweaks.mixins.json"
+[[dependencies.tech_tweaks]]
+modId="minecraft"
+type="required"
+versionRange="[26.2,26.3)"
+side="BOTH"
+[[dependencies.tech_tweaks]]
+modId="neoforge"
+type="required"
+versionRange="[26.2.0.88,26.3)"
+side="BOTH"
+[[dependencies.tech_tweaks]]
+modId="hbm"
+type="required"
+versionRange="[1.0.1,1.1)"
+ordering="AFTER"
+side="BOTH"
+[[dependencies.tech_tweaks]]
+modId="curios"
+type="required"
+versionRange="[16,17)"
+ordering="AFTER"
+side="BOTH"
