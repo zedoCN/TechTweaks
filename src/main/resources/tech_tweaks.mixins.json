@@ -11,10 +11,7 @@
     "VaultStateMixin",
     "VaultDataAccess",
     "CuriosOpenMixin",
-    "MeteorSpawnMixin",
-    "PipezItemMixin",
-    "OilSurfaceMixin",
-    "FallingLeafMixin"
+    "MeteorSpawnMixin"
   ],
   "injectors": {
     "defaultRequire": 1

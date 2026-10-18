@@ -1,4 +1,4 @@
-package cn.zedocn.tech.performance;
+package cn.zedocn.tech.server.performance;
 
 import java.util.List;
 import java.util.function.BiPredicate;

@@ -1,8 +1,21 @@
 # TECH Tweaks
 
-服务于 TECH 的 Minecraft 26.2 / NeoForge 26.2.0.88 扩展模组。当前构建 0.1.3，客户端和服务端都需要安装。0.1.1 于 2026-10-09 上线；0.1.3 的生产部署与验收状态见下方记录。
+服务于 TECH 的 Minecraft 26.2 / NeoForge 26.2.0.88 扩展模组。当前双端构建 0.1.4，客户端和服务端都需要安装；服务端模块为 0.1.0，仅服务器安装。0.1.1 于 2026-10-09 上线；0.1.3 的生产部署与验收状态见下方记录。
 
-## 0.1.3 性能修复
+## 模块划分与在线备份
+
+同一仓库构建两个 JAR：
+
+- `tech-tweaks-0.1.4.jar`：原有方块、物品、控制器、GUI、网络同步与玩法兼容，双端安装。
+- `tech-tweaks-server-0.1.0.jar`：Pipez 搬运优化、压裂塔地表查询、异常落叶清理与在线假人快照，仅服务器安装。不能下发到玩家 AutoModpack 清单。
+
+性能代码及其 Mixin、JUnit 测试已从双端模块迁入 `server/`，算法保持不变；服务端必须配套更新两个 JAR，不能将旧 0.1.3 与服务端模块一起加载，否则会重复应用补丁。
+
+`techbackup snapshot <32位十六进制nonce>` 仅允许最高管理权限，用于运维脚本；在主线程同一命令中捕获当前可驻留假人的原生动作包、强制保存玩家与世界，再原子写入 `world/fake_player.rg.json`。保留 SiliconeDolls 的 `rolling_gate.NoResident` 排除规则，并要求驻留、动作恢复及离线名字生成规则全部开启。空名单也明确写 `{}`，不沿用旧名单。成功回执包含本次 nonce、人数和文件 SHA-256；失败不返回成功回执。
+
+infra-ops 的在线快照脚本负责 `save-off`、调用此命令、校验源文件与复制副本、`save-on` 及 Git LFS 提交。回档后由 SiliconeDolls 原生启动逻辑恢复，恢复工具确认名单内假人已上线后才报告完成。旧快照没有此文件时不能追补当时的名单和动作。
+
+## 0.1.3 性能修复（现归服务端模块）
 
 - Pipez 1.2.32+26.2 物品轮询：只批量执行同一源槽位物品的完整轮次，每个目标获得相同件数。先确认单件抽取／插入仍允许；批量遇到容量不足、过滤拒绝或抽取数量不符时整批回滚，再交回原单件逻辑。混合物品、组件、总速率、余数、目标游标和原有过滤规则保留；不加降频、持久缓存或新升级卡。Pipez 不存在时跳过对应 Mixin。
 - NTM 1.0.1 压裂塔地表查询：利用 `WORLD_SURFACE` 高度图直接找到首个非空气方块，替代从世界顶端逐格扫描。保留随机调用、10 列污染处理、产油／耗电／压裂液消耗；高度图包含树冠、水面和屋顶，不缓存过期地表高度。
@@ -49,23 +62,27 @@
 
 ## 构建
 
-需要 JDK 25；首次下载 Minecraft 资源的工具还需可发现的 JDK 21。编译和回归检查使用当前 TECH 的五个精确依赖版本：
+需要 JDK 25；首次下载 Minecraft 资源的工具还需可发现的 JDK 21。编译和回归检查使用当前 TECH 的七个精确依赖版本：
 
 - `ntm-next-neoforge-1.0.1+mc26.2.jar`
 - `curios-neoforge-16.0.0+26.2.jar`
 - `sophisticatedbackpacks-26.2-3.26.8.2179.jar`
 - `sophisticatedcore-26.2-1.5.2.2359.jar`
 - `pipez-neoforge-1.2.32+26.2.jar`
+- `SiliconeDolls-neoforge-26.2-1.0.0+build.67.jar`（TECH 修复版）
+- `RollingGate-neoforge-26.2-1.1.0+build.70.jar`
 
-使用 `python3 scripts/import-reference-mods.py CLIENT_PACK.zip` 从对应客户端整合包导入 `libs/`。脚本在写入前验证五个文件的 SHA-256；依赖不打包进本模组 JAR。
+使用 `python3 scripts/import-reference-mods.py CLIENT_PACK.zip` 从对应客户端整合包导入 `libs/`。脚本在写入前验证七个文件的 SHA-256；依赖不打包进本模组 JAR。
 
 ```sh
-./gradlew test jar sourcesJar
+./gradlew test jar sourcesJar :server:test :server:jar :server:sourcesJar
 ```
 
-输出：`build/libs/tech-tweaks-0.1.3.jar` 与源码 JAR。NeoForge JUnit 检查会加载真实 Minecraft／NTM／Curios／Pipez Mixin，包含两组共 2,000 个随机库存场景与原单件算法的结果对照，以及水面、树冠、屋顶和空列的实际 NTM 方法验证。单元测试不替代完整客户端验收。
+输出：`build/libs/tech-tweaks-0.1.4.jar`、`server/build/libs/tech-tweaks-server-0.1.0.jar` 及各自源码 JAR。NeoForge JUnit 检查会加载真实 Minecraft／NTM／Curios／Pipez Mixin，包含两组共 2,000 个随机库存场景与原单件算法的结果对照，以及水面、树冠、屋顶和空列的实际 NTM 方法验证。单元测试不替代完整客户端验收。
 
 `python3 scripts/verify-performance.py` 启动独立的 `runs/performance-verification/` 测试世界，游戏和临时 RCON 均只绑定 loopback；验证真实 Pipez 的混合物品与余数、批量计数、机器拒收时的重复探测消除与物品保留，以及落叶／砂子／方块数据／活塞占位边界后正常停服。它不读取生产存档。世界与日志保持 Git 忽略；重复运行只清理带本脚本标记的测试世界。可用 `TECH_TEST_JAVA_PATHS` 向 Gradle 指定已安装 JDK 路径。
+
+`python3 scripts/verify-backup.py --infra-ops /path/to/infra-ops` 使用独立的 `runs/backup-verification/` 世界，验证在线导出、Git LFS 保存、实际恢复工具的对象提取与原生启动恢复，以及背包、位置、热栏、循环动作和空名单。临时口令、测试世界和日志保持 Git 忽略，不读取生产世界。
 
 ## 尚需实机验收
 
@@ -102,3 +119,22 @@
 正式服最大堆按服主要求由 6G 增至 8G，服务 slice 上限 12G。
 更新前世界快照、原 JAR 与原发布清单均已保留；详细坐标、验收与回退路径见
 [infra-ops 记录](https://gitea.zedo.top:408/zedoCN/infra-ops/src/branch/master/notes/tech-performance-fixes-20261017.md)。
+
+
+## 2026-10-18 模块拆分与备份验收
+
+双端 0.1.4／服务端 0.1.0 JAR SHA256 分别为：
+`29cfdaa3fb1e3fab06191f503e756cd104661b5230a126c5a30ed381deefaef7`、
+`c7b9bb66bc9b349c8bdfdee4bd8aa4a050d37c8c79966341cfff3545b3c6305f`。
+8 个迁移源码／测试文件除包名外与旧版逐字一致；两个模块不共享 Java 包或重复注册 Mixin。
+双端 JAR 无迁移后的性能类，服务端 JAR 无客户端 GUI／资源。
+
+双端模块 13 项、服务端模块 15 项 JUnit 均通过；真实隔离服 10 项性能检查通过。
+`verify-backup.py` 的 14 项检查验证了主线程导出、Git LFS 备份及恢复工具实际提取、
+原生启动自动上线、背包／位置／热栏／循环动作／潜行恢复、空名单以及关闭动作恢复时拒绝备份。
+生产正常重启一次，既有假人自动恢复；11:30:34 首个新在线快照
+`9992fcacf7ace7d98b84af1661d8b2e173b45a09` 已核实包含名单与原生动作。
+旧在线快照没有名单时不能追补当时状态；生产世界没有执行回档测试。
+
+必需／兼容两条公网更新清单保持 69／87 项，双端 JAR 已更新为 0.1.4，服务端 JAR 不在客户端清单。
+公网 head／journal／历史策略、对象长度及新 JAR 下载哈希校验通过；玩家真实客户端更新仍以实际操作为准。

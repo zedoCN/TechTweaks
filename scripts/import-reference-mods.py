@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Import the five exact compile/test dependencies from a TECH client-pack zip."""
+"""Import the seven exact compile/test dependencies from a TECH client-pack zip."""
 from pathlib import Path
 from zipfile import ZipFile
 import hashlib, sys
@@ -10,6 +10,10 @@ EXPECTED = {
     'sophisticatedcore-26.2-1.5.2.2359.jar': '64c29a0042d3a3d74a46443756e7c310af5e02e35041b57db291462bb95f12a6',
     'pipez-neoforge-1.2.32+26.2.jar': 'b57183e9e66144a0773e4fd89cce85b0827fc300d76dca3cc4c727fb9532ffc3',
 }
+EXPECTED.update({
+    'SiliconeDolls-neoforge-26.2-1.0.0+build.67.jar': '50f5b2ae2890702663879319203752baa3219a800706a813163dd20d5ef6ba7d',
+    'RollingGate-neoforge-26.2-1.1.0+build.70.jar': 'af23949a9cd2a7e619e0dd4e457227ab6b36f6be1b01e852ec0b3a03d5e3121c',
+})
 root = Path(__file__).resolve().parents[1]
 if len(sys.argv) != 2:
     raise SystemExit("usage: python3 scripts/import-reference-mods.py CLIENT_PACK.zip")

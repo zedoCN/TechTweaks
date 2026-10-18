@@ -1,4 +1,4 @@
-package cn.zedocn.tech.performance;
+package cn.zedocn.tech.server.performance;
 
 import com.hbm.blocks.ModBlocks;
 import net.minecraft.commands.Commands;

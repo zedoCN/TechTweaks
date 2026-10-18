@@ -1,7 +1,7 @@
-package cn.zedocn.tech.mixin;
+package cn.zedocn.tech.server.mixin;
 
-import cn.zedocn.tech.performance.FairItemTransfer;
-import cn.zedocn.tech.performance.RejectedItemTransfer;
+import cn.zedocn.tech.server.performance.FairItemTransfer;
+import cn.zedocn.tech.server.performance.RejectedItemTransfer;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import java.util.function.Predicate;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;

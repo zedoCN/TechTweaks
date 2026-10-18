@@ -1,6 +1,6 @@
-package cn.zedocn.tech.mixin;
+package cn.zedocn.tech.server.mixin;
 
-import cn.zedocn.tech.performance.PerformanceFixes;
+import cn.zedocn.tech.server.performance.PerformanceFixes;
 import com.hbm.world.feature.OilSurfaceScarring;
 import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.util.RandomSource;

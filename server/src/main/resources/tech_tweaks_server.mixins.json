@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "cn.zedocn.tech.server.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": [
+    "PipezItemMixin",
+    "OilSurfaceMixin",
+    "FallingLeafMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

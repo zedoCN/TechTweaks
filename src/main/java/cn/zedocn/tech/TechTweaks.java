@@ -49,7 +49,6 @@ public final class TechTweaks {
         NeoForge.EVENT_BUS.addListener(AreaProtection::checkSpawn);
         NeoForge.EVENT_BUS.addListener(AreaProtection::levelUnload);
         NeoForge.EVENT_BUS.addListener(EnvironmentControl::unload);
-        NeoForge.EVENT_BUS.addListener(cn.zedocn.tech.performance.PerformanceFixes::commands);
     }
     private void capabilities(RegisterCapabilitiesEvent event) {
         event.registerBlockEntity(Capabilities.Item.BLOCK, ENTITY.get(), (be, side) -> be.externalInventory);

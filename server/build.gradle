@@ -1,0 +1,21 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+version = '0.1.0'
+group = 'cn.zedocn.tech'
+base { archivesName = 'tech-tweaks-server' }
+java { toolchain.languageVersion = JavaLanguageVersion.of(25); withSourcesJar() }
+repositories { mavenCentral() }
+dependencies {
+    implementation fileTree(dir: '../libs', include: '*.jar')
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
+}
+neoForge {
+    enable { version = '26.2.0.88'; disableRecompilation = true }
+    mods { tech_tweaks_server { sourceSet sourceSets.main } }
+}
+neoForge.unitTest { enable(); testedMod = neoForge.mods.tech_tweaks_server }
+test { useJUnitPlatform() }
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }

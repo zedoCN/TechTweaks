@@ -1,4 +1,4 @@
-package cn.zedocn.tech.performance;
+package cn.zedocn.tech.server.performance;
 
 import com.hbm.world.feature.OilSurfaceScarring;
 import java.lang.reflect.Proxy;

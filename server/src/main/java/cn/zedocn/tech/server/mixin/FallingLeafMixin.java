@@ -1,6 +1,6 @@
-package cn.zedocn.tech.mixin;
+package cn.zedocn.tech.server.mixin;
 
-import cn.zedocn.tech.performance.PerformanceFixes;
+import cn.zedocn.tech.server.performance.PerformanceFixes;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
