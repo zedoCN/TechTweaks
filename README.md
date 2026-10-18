@@ -1,13 +1,13 @@
 # TECH Tweaks
 
-服务于 TECH 的 Minecraft 26.2 / NeoForge 26.2.0.88 扩展模组。当前双端构建 0.1.5，客户端和服务端都需要安装；服务端模块为 0.1.0，仅服务器安装。0.1.1 于 2026-10-09 上线；0.1.3 的生产部署与验收状态见下方记录。
+服务于 TECH 的 Minecraft 26.2 / NeoForge 26.2.0.88 扩展模组。当前双端构建 0.1.5，客户端和服务端都需要安装；服务端模块为 0.1.1，仅服务器安装。0.1.1 于 2026-10-09 上线；0.1.3 的生产部署与验收状态见下方记录。
 
 ## 模块划分与在线备份
 
 同一仓库构建两个 JAR：
 
 - `tech-tweaks-0.1.5.jar`：原有方块、物品、控制器、GUI、网络同步与玩法兼容，双端安装。
-- `tech-tweaks-server-0.1.0.jar`：Pipez 搬运优化、压裂塔地表查询、异常落叶清理与在线假人快照，仅服务器安装。不能下发到玩家 AutoModpack 清单。
+- `tech-tweaks-server-0.1.1.jar`：Pipez 搬运优化、压裂塔地表查询、异常落叶清理与在线假人快照，仅服务器安装。不能下发到玩家 AutoModpack 清单。
 
 性能代码及其 Mixin、JUnit 测试已从双端模块迁入 `server/`，算法保持不变；服务端必须配套更新两个 JAR，不能将旧 0.1.3 与服务端模块一起加载，否则会重复应用补丁。
 
@@ -78,7 +78,7 @@ infra-ops 的在线快照脚本负责 `save-off`、调用此命令、校验源�
 ./gradlew test jar sourcesJar :server:test :server:jar :server:sourcesJar
 ```
 
-输出：`build/libs/tech-tweaks-0.1.5.jar`、`server/build/libs/tech-tweaks-server-0.1.0.jar` 及各自源码 JAR。NeoForge JUnit 检查会加载真实 Minecraft／NTM／Curios／Pipez Mixin，包含两组共 2,000 个随机库存场景与原单件算法的结果对照，以及水面、树冠、屋顶和空列的实际 NTM 方法验证。单元测试不替代完整客户端验收。
+输出：`build/libs/tech-tweaks-0.1.5.jar`、`server/build/libs/tech-tweaks-server-0.1.1.jar` 及各自源码 JAR。NeoForge JUnit 检查会加载真实 Minecraft／NTM／Curios／Pipez Mixin，包含两组共 2,000 个随机库存场景与原单件算法的结果对照，以及水面、树冠、屋顶和空列的实际 NTM 方法验证。单元测试不替代完整客户端验收。
 
 `python3 scripts/verify-performance.py` 启动独立的 `runs/performance-verification/` 测试世界，游戏和临时 RCON 均只绑定 loopback；验证真实 Pipez 的混合物品与余数、批量计数、机器拒收时的重复探测消除与物品保留，以及落叶／砂子／方块数据／活塞占位边界后正常停服。它不读取生产存档。世界与日志保持 Git 忽略；重复运行只清理带本脚本标记的测试世界。可用 `TECH_TEST_JAVA_PATHS` 向 Gradle 指定已安装 JDK 路径。
 
@@ -148,3 +148,23 @@ infra-ops 的在线快照脚本负责 `save-off`、调用此命令、校验源�
 - `scripts/verify-guidance.py` 只连接本机 `runs/guidance-client` 的测试桥，要求已打开独立 `GuidanceVerification` 单人测试世界（生产存档禁止复用）。验证真实自然生成、落地破坏、256 格边界、玻璃屋顶、浸水、朝向、未加载区块、非自然生成旁路，以及控制器范围与耗电。测试桥配置和报告只保留在 Git 忽略的 runs 内。
 
 本次验证：双端 15 项、服务端 15 项 JUnit 通过；隔离单人世界 16 项实测通过，包含真实客户端按钮同步与 NBT 保存载入（16／32／256 格）。测试报告在 `runs/evidence/guidance-verification.json`。
+
+
+## 只读世界与 AE2 查询（服务端 0.1.1）
+
+`techquery` 返回能力目录，`techquery <JSON>` 执行查询。需要管理员权限，通过既有 Minecraft 命令通道接入 AI，不需要升级客户端、MCSP/Nexus 或给 AI 挂载宿主目录。
+
+提供 18 类数据查询：实时状态、地表/群系地图采样、已加载机器和实体搜索、普通方块暴力搜索、保存区块的方块搜索、容器与物品组件、方块/实体/command storage 的完整 NBT，以及世界目录内 `.dat` 与单个 Anvil 保存区块 NBT；AE2 可查询电力/频道、缓存库存、节点坐标、接口配置和存量、样板输入/输出/槽位/坐标、CPU 和合成任务。
+
+- 只读，无物品存取、制作、改 NBT、生成/强加载区块。AE2 为可选依赖；缺少时通用查询可用，专用查询明确失败。
+- 支持字段路径、多匹配选择、字段/值搜索、保留类型的 SNBT 和 Unicode 字符分页。数据截断、未知与失败单独标明，失败经标准命令错误回传，不把返回 0 当成成功。
+- 地图扫描半径最多 256，普通方块扫描每次最多 32768 工作单位，按 cursor 续查；列表最多 64 项，输出最多 48 KiB。离线方块数据直接解码实际 Anvil 调色板，不维护世界索引。
+- 存档读取限制在当前世界真实目录内的指定记录，不允许路径逃逸；压缩和解压分配均限制 8 MiB，支持 gzip/zlib/raw 及外部区块。带文件时间与记录 SHA256，读取变化时报错；磁盘数据可能落后于实时内存，且不是原子世界快照。
+- 示例：`techquery {"query":"blocks.find","dimension":"minecraft:overworld","x":0,"y":64,"z":0,"radius":64,"min_y":-64,"max_y":128,"filter":"diamond_ore"}`。
+- 示例：`techquery {"query":"ae2.patterns","dimension":"minecraft:overworld","x":0,"y":64,"z":0,"filter":"iron_plate"}`。
+
+AI 使用说明由 infra-ops 的 `scripts/deploy/minecraft-hbm/ai-skills/tech-world-query/SKILL.md` 管理。运行中的独立测试客户端打开 GuidanceVerification 后，执行 `python3 scripts/verify-world-query.py`；无 AE2 降级实服验证执行 `python3 scripts/verify-query-no-ae2.py`。两者均只使用独立测试世界。
+
+查询集成测试的客户端 profile 为 `runGuidanceClient`，只使用 `runs/guidance-client/saves/GuidanceVerification`。
+需要在该 profile 的 mods 目录提供独立测试桥 MCPFabric 0.3.0-zedo.31、HBM 客户端依赖 Crankshaft 1.5.5，以及 AE2/GuideME 26.2.1-alpha；
+测试桥仅绑定 loopback，配置必须保持 Git 忽略，不能复用生产凭据。测试世界先用同一模组集创建新的平坦世界，正常保存退出后再测试，不复制生产地图。

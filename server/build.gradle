@@ -2,12 +2,13 @@ plugins {
     id 'java-library'
     id 'net.neoforged.moddev' version '2.0.148'
 }
-version = '0.1.0'
+version = '0.1.1'
 group = 'cn.zedocn.tech'
 base { archivesName = 'tech-tweaks-server' }
 java { toolchain.languageVersion = JavaLanguageVersion.of(25); withSourcesJar() }
-repositories { mavenCentral() }
+repositories { mavenCentral(); maven { url = 'https://api.modrinth.com/maven' } }
 dependencies {
+    compileOnly "maven.modrinth:ae2:26.2.1-alpha"
     implementation fileTree(dir: '../libs', include: '*.jar')
     testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'

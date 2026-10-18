@@ -3,10 +3,10 @@ loaderVersion="[1,)"
 license="All Rights Reserved"
 [[mods]]
 modId="tech_tweaks_server"
-version="0.1.0"
+version="0.1.1"
 displayName="TECH Tweaks Server"
 authors="zedo"
-description="TECH 服务端性能修复与在线备份，不需要客户端安装。"
+description="TECH 服务端性能修复、在线备份及只读世界/AE2/NBT 查询，不需要客户端安装。"
 [[mixins]]
 config="tech_tweaks_server.mixins.json"
 [[dependencies.tech_tweaks_server]]
@@ -29,5 +29,12 @@ side="SERVER"
 modId="silicone_dolls"
 type="required"
 versionRange="[1.0.0+build.67]"
+ordering="AFTER"
+side="SERVER"
+
+[[dependencies.tech_tweaks_server]]
+modId="ae2"
+type="optional"
+versionRange="[26.2.1-alpha,26.3)"
 ordering="AFTER"
 side="SERVER"

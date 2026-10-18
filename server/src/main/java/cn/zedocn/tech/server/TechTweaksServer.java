@@ -34,6 +34,7 @@ public final class TechTweaksServer {
 
     public TechTweaksServer() {
         NeoForge.EVENT_BUS.addListener(TechTweaksServer::commands);
+        NeoForge.EVENT_BUS.addListener(cn.zedocn.tech.server.query.WorldQueries::register);
         NeoForge.EVENT_BUS.addListener(cn.zedocn.tech.server.performance.PerformanceFixes::commands);
     }
 
