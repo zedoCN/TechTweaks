@@ -2,7 +2,7 @@ plugins {
     id 'java-library'
     id 'net.neoforged.moddev' version '2.0.148'
 }
-version = '0.1.4'
+version = '0.1.5'
 group = 'cn.zedocn.tech'
 base { archivesName = 'tech-tweaks' }
 java { toolchain.languageVersion = JavaLanguageVersion.of(25); withSourcesJar() }
@@ -17,6 +17,12 @@ neoForge {
     enable { version = '26.2.0.88'; disableRecompilation = true }
     runs {
         client { client() }
+        guidanceClient {
+            client()
+            gameDirectory = file('runs/guidance-client')
+            programArguments.addAll '--username', 'TechPortTest', '--quickPlaySingleplayer', 'GuidanceVerification'
+            jvmArgument '-Xmx2G'
+        }
         server { server(); programArgument '--nogui' }
         verificationServer {
             server()

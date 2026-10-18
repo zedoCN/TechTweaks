@@ -12,7 +12,7 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
 
 public final class MeteorGuidance {
-    public static final int RANGE = 128;
+    public static final int RANGE = 256;
 
     private MeteorGuidance() {}
 

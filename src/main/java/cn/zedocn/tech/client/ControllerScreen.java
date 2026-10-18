@@ -43,7 +43,7 @@ public final class ControllerScreen extends AbstractContainerScreen<ControllerMe
     @Override protected void extractLabels(GuiGraphicsExtractor g,int x,int y) {
         super.extractLabels(g,x,y);
         int energy=(menu.data.get(8)&65535)|(menu.data.get(9)&65535)<<16;
-        String detail=switch(menu.data.get(0)) { case 0 -> "下轮人数："+menu.data.get(2)+(menu.data.get(11)>0?" 活怪："+menu.data.get(12):""); case 3 -> "区域半径："+menu.data.get(3)+" 格"; default -> "红石／物品接口自动运行"; };
+        String detail=switch(menu.data.get(0)) { case 0 -> "下轮人数："+menu.data.get(2)+(menu.data.get(11)>0?" 活怪："+menu.data.get(12):""); case 3 -> "半径 "+menu.data.get(3)+" 格 · "+Balance.protectionCost(menu.data.get(3))+" FE/s"; default -> "红石／物品接口自动运行"; };
         g.text(font,detail,8,18,0xFF30343A,false);
         g.text(font,"储能："+energy+" FE",8,27,0xFF30343A,false);
         String[] status={"就绪","正面没有目标","电力不足","轮次进行中","缺少瓶子／正确钥匙","已暂停","维度／刷怪规则不允许","输出已满","其他环境控制器占用","正在刷怪","准备自动启动","刷怪受阻：检查生成条件","等待清理本轮怪物","正在结算奖励","等待冷却重置","刷怪笼未配置生物"};
