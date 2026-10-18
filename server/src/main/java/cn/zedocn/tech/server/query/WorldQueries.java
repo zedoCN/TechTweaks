@@ -120,15 +120,14 @@ public final class WorldQueries {
                 }
                 case "nbt.storage" -> {
                     var id=Identifier.parse(text(request,"id",""));
-                    if(source.getServer().getCommandStorage().keys().noneMatch(id::equals))throw new IllegalArgumentException("Command storage ID does not exist");
-                    tag=source.getServer().getCommandStorage().get(id);
+                    tag=readStorage(source.getServer().getCommandStorage(),id);
                 }
                 case "nbt.file", "nbt.chunk" -> tag = SavedNbt.read(level, request, out, query.equals("nbt.chunk"), pos);
                 default -> throw new IllegalArgumentException("Unknown NBT query");
             }
             String path = text(request,"path","");
             if (path.length() > 1024) throw new IllegalArgumentException("NBT path exceeds 1024 characters");
-            List<Tag> selected = path.isEmpty() ? List.of(tag) : NbtPathArgument.nbtPath().parse(new StringReader(path)).get(tag);
+            List<Tag> selected = selectPath(tag,path);
             // Each match can itself be paged; selection count is explicit rather than silently discarded.
             int match = integer(request,"match",0,0,Math.max(0,selected.size()-1));
             if (selected.isEmpty()) throw new IllegalArgumentException("NBT path has no matches");
@@ -215,6 +214,19 @@ public final class WorldQueries {
         throw new IllegalArgumentException("Unknown query; run techquery for capabilities");
     }
 
+    static CompoundTag readStorage(net.minecraft.world.level.storage.CommandStorage storage,Identifier id) {
+        // get() performs the native read-only lazy load; keys() only sees loaded namespaces.
+        CompoundTag tag=storage.get(id);
+        if(storage.keys().noneMatch(id::equals))throw new IllegalArgumentException("Command storage ID does not exist");
+        return tag;
+    }
+    static List<Tag> selectPath(Tag tag,String path) throws CommandSyntaxException {
+        if(path.isEmpty())return List.of(tag);
+        var reader=new StringReader(path);
+        var parsed=NbtPathArgument.nbtPath().parse(reader);
+        if(reader.canRead())throw new IllegalArgumentException("Unexpected trailing NBT path input");
+        return parsed.get(tag);
+    }
     static BlockEntity blockEntity(ServerLevel level,BlockPos pos) {
         requireLoaded(level,pos);BlockEntity be=level.getBlockEntity(pos);
         if (be==null) throw new IllegalArgumentException("No block entity at position");return be;

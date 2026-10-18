@@ -1,13 +1,13 @@
 # TECH Tweaks
 
-服务于 TECH 的 Minecraft 26.2 / NeoForge 26.2.0.88 扩展模组。当前双端构建 0.1.5，客户端和服务端都需要安装；服务端模块为 0.1.1，仅服务器安装。0.1.1 于 2026-10-09 上线；0.1.3 的生产部署与验收状态见下方记录。
+服务于 TECH 的 Minecraft 26.2 / NeoForge 26.2.0.88 扩展模组。当前双端构建 0.1.5，客户端和服务端都需要安装；服务端模块为 0.1.2，仅服务器安装。0.1.1 于 2026-10-09 上线；0.1.3 的生产部署与验收状态见下方记录。
 
 ## 模块划分与在线备份
 
 同一仓库构建两个 JAR：
 
 - `tech-tweaks-0.1.5.jar`：原有方块、物品、控制器、GUI、网络同步与玩法兼容，双端安装。
-- `tech-tweaks-server-0.1.1.jar`：Pipez 搬运优化、压裂塔地表查询、异常落叶清理与在线假人快照，仅服务器安装。不能下发到玩家 AutoModpack 清单。
+- `tech-tweaks-server-0.1.2.jar`：Pipez 搬运优化、压裂塔地表查询、异常落叶清理与在线假人快照，仅服务器安装。不能下发到玩家 AutoModpack 清单。
 
 性能代码及其 Mixin、JUnit 测试已从双端模块迁入 `server/`，算法保持不变；服务端必须配套更新两个 JAR，不能将旧 0.1.3 与服务端模块一起加载，否则会重复应用补丁。
 
@@ -78,7 +78,7 @@ infra-ops 的在线快照脚本负责 `save-off`、调用此命令、校验源�
 ./gradlew test jar sourcesJar :server:test :server:jar :server:sourcesJar
 ```
 
-输出：`build/libs/tech-tweaks-0.1.5.jar`、`server/build/libs/tech-tweaks-server-0.1.1.jar` 及各自源码 JAR。NeoForge JUnit 检查会加载真实 Minecraft／NTM／Curios／Pipez Mixin，包含两组共 2,000 个随机库存场景与原单件算法的结果对照，以及水面、树冠、屋顶和空列的实际 NTM 方法验证。单元测试不替代完整客户端验收。
+输出：`build/libs/tech-tweaks-0.1.5.jar`、`server/build/libs/tech-tweaks-server-0.1.2.jar` 及各自源码 JAR。NeoForge JUnit 检查会加载真实 Minecraft／NTM／Curios／Pipez Mixin，包含两组共 2,000 个随机库存场景与原单件算法的结果对照，以及水面、树冠、屋顶和空列的实际 NTM 方法验证。单元测试不替代完整客户端验收。
 
 `python3 scripts/verify-performance.py` 启动独立的 `runs/performance-verification/` 测试世界，游戏和临时 RCON 均只绑定 loopback；验证真实 Pipez 的混合物品与余数、批量计数、机器拒收时的重复探测消除与物品保留，以及落叶／砂子／方块数据／活塞占位边界后正常停服。它不读取生产存档。世界与日志保持 Git 忽略；重复运行只清理带本脚本标记的测试世界。可用 `TECH_TEST_JAVA_PATHS` 向 Gradle 指定已安装 JDK 路径。
 
@@ -168,3 +168,5 @@ AI 使用说明由 infra-ops 的 `scripts/deploy/minecraft-hbm/ai-skills/tech-wo
 查询集成测试的客户端 profile 为 `runGuidanceClient`，只使用 `runs/guidance-client/saves/GuidanceVerification`。
 需要在该 profile 的 mods 目录提供独立测试桥 MCPFabric 0.3.0-zedo.31、HBM 客户端依赖 Crankshaft 1.5.5，以及 AE2/GuideME 26.2.1-alpha；
 测试桥仅绑定 loopback，配置必须保持 Git 忽略，不能复用生产凭据。测试世界先用同一模组集创建新的平坦世界，正常保存退出后再测试，不复制生产地图。
+
+服务端 0.1.2 修正 command storage 在重启后首次查询的原生懒加载顺序，并拒绝 NBT 字段路径尾部未解析的输入。

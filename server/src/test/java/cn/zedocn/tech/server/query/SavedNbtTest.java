@@ -62,6 +62,22 @@ class SavedNbtTest {
         }
         assertThrows(IllegalArgumentException.class,()->MapQueries.paletteIndex(new long[0],2,0));
     }
+    @Test void readsStorageBeforeCheckingLazyNamespaceKeys() {
+        var id=net.minecraft.resources.Identifier.parse("test:stored");
+        var tag=new CompoundTag();tag.putLong("value",Long.MAX_VALUE);
+        var storage=new net.minecraft.world.level.storage.CommandStorage(null) {
+            boolean loaded;
+            @Override public CompoundTag get(net.minecraft.resources.Identifier key){loaded=true;return tag;}
+            @Override public java.util.stream.Stream<net.minecraft.resources.Identifier> keys(){return loaded?java.util.stream.Stream.of(id):java.util.stream.Stream.empty();}
+        };
+        assertSame(tag,WorldQueries.readStorage(storage,id));
+        assertThrows(IllegalArgumentException.class,()->WorldQueries.readStorage(storage,net.minecraft.resources.Identifier.parse("test:missing")));
+    }
+    @Test void nbtPathMustConsumeTheWholeRequest() throws Exception {
+        var tag=new CompoundTag();tag.putString("with space","value");
+        assertEquals("value",WorldQueries.selectPath(tag,"\"with space\"").getFirst().asString().orElseThrow());
+        assertThrows(IllegalArgumentException.class,()->WorldQueries.selectPath(tag,"\"with space\" trailing"));
+    }
     @Test void rejectsNonIntegralAndOverflowingRequestValues() {
         for(String bad:new String[]{"1.2","2147483648","true","\"1\""}) {
             var request=JsonParser.parseString("{\"radius\":"+bad+"}").getAsJsonObject();
