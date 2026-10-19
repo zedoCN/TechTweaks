@@ -3,7 +3,7 @@ loaderVersion="[1,)"
 license="All Rights Reserved"
 [[mods]]
 modId="tech_tweaks_server"
-version="0.1.2"
+version="0.1.3"
 displayName="TECH Tweaks Server"
 authors="zedo"
 description="TECH 服务端性能修复、在线备份及只读世界/AE2/NBT 查询，不需要客户端安装。"
