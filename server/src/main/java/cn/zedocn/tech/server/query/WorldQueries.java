@@ -75,6 +75,17 @@ public final class WorldQueries {
         if (query.equals("capabilities")) {
             out.add("queries", JsonParser.parseString("[\"status\",\"map\",\"blocks.find\",\"blocks.saved\",\"blocks\",\"block\",\"entities\",\"nbt.block\",\"nbt.entity\",\"nbt.storage\",\"nbt.file\",\"nbt.chunk\",\"ae2.network\",\"ae2.items\",\"ae2.nodes\",\"ae2.interfaces\",\"ae2.patterns\",\"ae2.cpus\"]"));
             out.addProperty("ae2_available", ModList.get().isLoaded("ae2"));
+            JsonArray dimensions = new JsonArray();
+            for (ServerLevel dimensionLevel : source.getServer().getAllLevels()) {
+                JsonObject row = new JsonObject();
+                row.addProperty("dimension", dimensionLevel.dimension().identifier().toString());
+                row.addProperty("min_y", dimensionLevel.getMinY());
+                row.addProperty("max_y", dimensionLevel.getMaxY());
+                dimensions.add(row);
+            }
+            out.add("dimensions", dimensions);
+            out.addProperty("blocks_find_scan_order", "anchor_chunk_sections_v2");
+            out.addProperty("blocks_find_cursor_encoding", "negative_position_minus_one; positive cursors retain legacy_columns_v1");
             out.addProperty("max_radius", 256);
             out.addProperty("max_limit", 64);
             out.addProperty("nbt_page_characters", 6000);

@@ -20,8 +20,8 @@ final class MapQueries {
         if(filter.isEmpty() && properties.isEmpty())throw new IllegalArgumentException("Block search requires filter or properties");
         int budget=WorldQueries.integer(request,"scan_budget",8192,1,32768);
         int minY=WorldQueries.integer(request,"min_y",Math.max(level.getMinY(),center.getY()-32),level.getMinY(),level.getMaxY());
-        int maxY=WorldQueries.integer(request,"max_y",Math.min(level.getMaxY(),center.getY()+32),minY,level.getMaxY());
-        JsonArray results=new JsonArray();int work=0,scanned=0,skipped=0,cursor,end,start;
+        int maxY=WorldQueries.integer(request,"max_y",Math.max(minY,Math.min(level.getMaxY(),center.getY()+32)),minY,level.getMaxY());
+        JsonArray results=new JsonArray();int work=0,scanned=0,skipped=0,cursor,end,start;boolean anchorOrder=false;
         if(query.equals("blocks.saved")) {
             CompoundTag chunk=(CompoundTag)SavedNbt.read(level,request,out,true,center);
             var sections=new ArrayList<CompoundTag>();
@@ -59,28 +59,85 @@ final class MapQueries {
             out.addProperty("scope","one_saved_chunk");
         } else {
             int radius=WorldQueries.integer(request,"radius",16,1,256),width=radius*2+1,height=maxY-minY+1;
-            end=Math.multiplyExact(Math.multiplyExact(width,width),height);cursor=WorldQueries.integer(request,"cursor",0,0,end);start=cursor;
-            var candidates=new IdentityHashMap<LevelChunkSection,Boolean>();int unloaded=0;
+            end=Math.multiplyExact(Math.multiplyExact(width,width),height);
+            // Negative cursors identify the new order without requiring old clients to echo a new field.
+            // Positive continuations keep the exact published column order; zero starts a new scan.
+            int token=WorldQueries.integer(request,"cursor",0,-end-1,end);
+            boolean legacy=token>0;anchorOrder=!legacy;
+            cursor=token<0?-token-1:token;start=cursor;
+            var orderedChunks=new TreeMap<Long,int[]>();
+            var orderedSections=new TreeMap<Integer,int[]>();
+            int lowX=center.getX()-radius,highX=center.getX()+radius,lowZ=center.getZ()-radius,highZ=center.getZ()+radius;
+            if(!legacy) {
+                int chunkWidth=(highX>>4)-(lowX>>4)+1,chunkDepth=(highZ>>4)-(lowZ>>4)+1;
+                int count=chunkWidth*chunkDepth;
+                for(int cx=lowX>>4;cx<=highX>>4;cx++)for(int cz=lowZ>>4;cz<=highZ>>4;cz++) {
+                    int dx=cx-(center.getX()>>4),dz=cz-(center.getZ()>>4);
+                    int tie=(cx-(lowX>>4))*chunkDepth+cz-(lowZ>>4);
+                    orderedChunks.put((long)(dx*dx+dz*dz)*count+tie,new int[]{
+                            Math.max(lowX,cx*16),Math.min(highX,cx*16+15),Math.max(lowZ,cz*16),Math.min(highZ,cz*16+15)});
+                }
+                int countY=(maxY>>4)-(minY>>4)+1;
+                for(int sy=minY>>4;sy<=maxY>>4;sy++) {
+                    int key=Math.abs(sy-(center.getY()>>4))*countY+sy-(minY>>4);
+                    orderedSections.put(key,new int[]{Math.max(minY,sy*16),Math.min(maxY,sy*16+15)});
+                }
+            }
+            var chunks=new ArrayList<>(orderedChunks.values());var sections=new ArrayList<>(orderedSections.values());
+            var candidates=new IdentityHashMap<LevelChunkSection,Boolean>();int unloaded=0,unloadedChunks=0;
+            int chunkIndex=0,sectionIndex=0,chunkStart=0,sectionStart=0,cachedChunkIndex=-1;
+            net.minecraft.world.level.chunk.LevelChunk cachedChunk=null;
             while(cursor<end && work<budget && results.size()<limit) {
-                work++;int x=center.getX()-radius+(cursor/height)/width,z=center.getZ()-radius+(cursor/height)%width,y=minY+cursor%height;
-                var chunk=level.getChunkSource().getChunkNow(x>>4,z>>4);
-                if(chunk==null){unloaded++;cursor+=height-cursor%height;continue;}
-                var section=chunk.getSection(chunk.getSectionIndex(y));
+                int x,z,y,chunkEnd,sectionEnd;
+                if(legacy) {
+                    x=lowX+(cursor/height)/width;z=lowZ+(cursor/height)%width;y=minY+cursor%height;
+                    chunkEnd=cursor+height-cursor%height;
+                    sectionEnd=cursor+Math.min(16-(y&15),maxY-y+1);
+                } else {
+                    // Each cursor offset belongs to one clipped chunk and one clipped section.
+                    // Advance across completed segments arithmetically, without looking up their blocks.
+                    int[] box=chunks.get(chunkIndex);
+                    int area=(box[1]-box[0]+1)*(box[3]-box[2]+1);
+                    while(cursor>=chunkStart+area*height) {
+                        chunkStart+=area*height;chunkIndex++;sectionIndex=0;sectionStart=chunkStart;
+                        box=chunks.get(chunkIndex);area=(box[1]-box[0]+1)*(box[3]-box[2]+1);
+                    }
+                    int[] ys=sections.get(sectionIndex);
+                    while(cursor>=sectionStart+area*(ys[1]-ys[0]+1)) {
+                        sectionStart+=area*(ys[1]-ys[0]+1);ys=sections.get(++sectionIndex);
+                    }
+                    int index=cursor-sectionStart,columns=box[1]-box[0]+1;
+                    x=box[0]+index%columns;z=box[2]+(index/columns)%(box[3]-box[2]+1);y=ys[0]+index/area;
+                    chunkEnd=chunkStart+area*height;sectionEnd=sectionStart+area*(ys[1]-ys[0]+1);
+                }
+                if(legacy || cachedChunkIndex!=chunkIndex) {
+                    cachedChunk=level.getChunkSource().getChunkNow(x>>4,z>>4);cachedChunkIndex=chunkIndex;
+                }
+                work++;
+                if(cachedChunk==null) {
+                    if(legacy)unloaded++;
+                    else {int[] box=chunks.get(chunkIndex);unloaded+=(box[1]-box[0]+1)*(box[3]-box[2]+1);unloadedChunks++;}
+                    cursor=chunkEnd;continue;
+                }
+                var section=cachedChunk.getSection(cachedChunk.getSectionIndex(y));
                 boolean any=candidates.computeIfAbsent(section,s->s.getStates().maybeHas(state->matches(state,filter,properties)));
-                if(!any){skipped++;cursor+=Math.min(16-(y&15),maxY-y+1);continue;}
+                if(!any){skipped++;cursor=sectionEnd;continue;}
                 BlockState state=section.getBlockState(x&15,y&15,z&15);scanned++;cursor++;
                 if(matches(state,filter,properties)) {
                     JsonObject row=WorldQueries.position(new BlockPos(x,y,z));row.addProperty("id",BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString());
                     JsonObject props=new JsonObject();state.getValues().forEach(v->props.addProperty(v.property().getName(),v.valueName()));row.add("properties",props);results.add(row);
                 }
             }
+            out.addProperty("scan_order",legacy?"legacy_columns_v1":"anchor_chunk_sections_v2");
+            out.addProperty("cursor_encoding",legacy?"nonnegative_position":"negative_position_minus_one");
+            out.addProperty("unloaded_chunks_skipped",unloadedChunks);
             out.addProperty("unloaded_columns_skipped",unloaded);out.addProperty("scope","live_loaded_blocks_in_requested_box");
             out.addProperty("radius",radius);out.addProperty("source","live_server_blocks");
         }
         out.addProperty("min_y",minY);out.addProperty("max_y",maxY);out.add("results",results);out.addProperty("returned",results.size());
-        out.addProperty("cursor",start);out.addProperty("scan_complete",cursor>=end);out.addProperty("total_positions",end);
+        out.addProperty("cursor",anchorOrder?-start-1:start);out.addProperty("scan_complete",cursor>=end);out.addProperty("total_positions",end);
         out.addProperty("visited_positions",cursor-start);out.addProperty("scanned_blocks",scanned);out.addProperty("work_units",work);
-        out.addProperty("palette_sections_skipped",skipped);if(cursor<end)out.addProperty("next_cursor",cursor);
+        out.addProperty("palette_sections_skipped",skipped);if(cursor<end)out.addProperty("next_cursor",anchorOrder?-cursor-1:cursor);
         out.addProperty("pagination_consistency","live_or_saved_record_can_change_compare_tick_or_record_sha256");return out;
     }
     private static JsonObject surface(ServerLevel level,BlockPos center,JsonObject request,JsonObject out,int offset,int limit) {
