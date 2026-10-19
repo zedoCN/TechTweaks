@@ -104,12 +104,15 @@ public final class WorldQueries {
             }
             out.add("dimensions", dimensions); out.add("players", players); return out;
         }
-        ServerLevel level = source.getServer().getLevel(ResourceKey.create(Registries.DIMENSION,
+        boolean storageQuery=query.equals("nbt.storage"),entityNbtQuery=query.equals("nbt.entity");
+        ServerLevel level = storageQuery?source.getLevel():source.getServer().getLevel(ResourceKey.create(Registries.DIMENSION,
                 Identifier.parse(text(request, "dimension", source.getLevel().dimension().identifier().toString()))));
         if (level == null) throw new IllegalArgumentException("Unknown dimension");
-        out.addProperty("dimension", level.dimension().identifier().toString());
+        if(storageQuery)out.addProperty("scope","server_command_storage");
+        else out.addProperty("dimension", level.dimension().identifier().toString());
         out.addProperty("game_time", level.getGameTime());
-        BlockPos pos = new BlockPos(integer(request,"x",0,-30_000_000,30_000_000),
+        // Entity identity and server command storage do not use positional coordinates.
+        BlockPos pos = storageQuery || entityNbtQuery?BlockPos.ZERO:new BlockPos(integer(request,"x",0,-30_000_000,30_000_000),
                 integer(request,"y",64,level.getMinY(),level.getMaxY()),integer(request,"z",0,-30_000_000,30_000_000));
         int offset = integer(request,"offset",0,0,16_000_000), limit = integer(request,"limit",32,1,64);
         String filter = text(request,"filter","").toLowerCase(Locale.ROOT);
@@ -146,6 +149,8 @@ public final class WorldQueries {
             if(request.has("find")) {
                 String find=text(request,"find","");
                 if(find.length()>256)throw new IllegalArgumentException("NBT search exceeds 256 characters");
+                out.addProperty("selected_path",path);out.addProperty("selected_match",match);out.addProperty("selected_matches",selected.size());
+                out.addProperty("path",path);out.addProperty("match",match);out.addProperty("matches",selected.size());
                 NbtSearch.search(value,path,find,offset,limit,out);
                 if(!out.has("source"))out.addProperty("source","live_server_nbt");
                 return out;
@@ -196,12 +201,20 @@ public final class WorldQueries {
         if (query.equals("entities")) {
             int radius=integer(request,"radius",64,1,256),scanned=0;boolean complete=true;
             List<JsonObject> rows=new ArrayList<>();
-            for (Entity e:level.getAllEntities()) {
+            double x=pos.getX()+.5,y=pos.getY()+.5,z=pos.getZ()+.5;
+            var box=new net.minecraft.world.phys.AABB(x-radius,y-radius,z-radius,x+radius,y+radius,z+radius);
+            // Collect only one look-ahead candidate beyond the work budget; avoid a full dense-area list.
+            var candidates=new ArrayList<Entity>();
+            level.getEntities(net.minecraft.world.level.entity.EntityTypeTest.forClass(Entity.class),box,
+                    com.google.common.base.Predicates.alwaysTrue(),candidates,MAX_SCAN+1);
+            for (Entity e:candidates) {
                 if (++scanned>MAX_SCAN) {complete=false;break;}
                 if (e.distanceToSqr(pos.getX()+.5,pos.getY()+.5,pos.getZ()+.5)>radius*(double)radius) continue;
                 JsonObject row=entity(e);if(matches(filter,row.toString())) rows.add(row);
             }
             rows.sort(Comparator.comparing(JsonObject::toString)); out.addProperty("scan_complete",complete);
+            out.addProperty("scope","loaded_entities_in_requested_sphere");
+            out.addProperty("candidate_scope","loaded_entities_intersecting_requested_bounding_box");
             out.addProperty("scanned",Math.min(scanned,MAX_SCAN)); page(out,rows,offset,limit); return out;
         }
         if (query.equals("block")) {
@@ -262,6 +275,15 @@ public final class WorldQueries {
         for(int i=offset;i<end;i++)data.add(rows.get(i));out.add("results",data);out.addProperty("matched",rows.size());out.addProperty("offset",offset);
         out.addProperty("truncated",end<rows.size());if(end<rows.size())out.addProperty("next_offset",end);
         out.addProperty("pagination_consistency","live_observation_repeat_query_if_world_changes");
+        out.addProperty("result_pagination","offset_pages_matched_rows_of_this_scan_only");
+        if(out.has("scan_complete")) {
+            out.addProperty("resume_supported",false);
+            out.addProperty("resume_reason","no_traversal_cursor; offset_and_filter_do_not_resume_unvisited_scan_tail");
+            if(!out.get("scan_complete").getAsBoolean()) {
+                if(!out.has("coverage_status"))out.addProperty("coverage_status","partial");
+                if(!out.has("scan_incomplete_reason"))out.addProperty("scan_incomplete_reason","Scan work limit reached; remaining candidates were not examined");
+            }
+        }
     }
     static String text(JsonObject j,String name,String fallback) {
         if(!j.has(name))return fallback;JsonElement value=j.get(name);

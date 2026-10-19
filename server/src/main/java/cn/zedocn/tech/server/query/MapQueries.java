@@ -25,7 +25,14 @@ final class MapQueries {
         if(query.equals("blocks.saved")) {
             CompoundTag chunk=(CompoundTag)SavedNbt.read(level,request,out,true,center);
             var sections=new ArrayList<CompoundTag>();
-            for(Tag tag:chunk.getListOrEmpty("sections"))if(tag instanceof CompoundTag section)sections.add(section);
+            // An unrecognized record is unknown, never a successfully searched empty chunk.
+            if(!(chunk.get("sections") instanceof ListTag savedSections) || savedSections.isEmpty())
+                throw new IllegalArgumentException("Saved block coverage unknown: missing, empty or unsupported sections list");
+            for(Tag tag:savedSections) {
+                if(!(tag instanceof CompoundTag section) || !(section.get("Y") instanceof NumericTag))
+                    throw new IllegalArgumentException("Saved block coverage unknown: unsupported section entry or Y coordinate");
+                sections.add(section);
+            }
             sections.sort(Comparator.comparingInt(section->section.getIntOr("Y",0)));
             end=Math.multiplyExact(sections.size(),4096);cursor=WorldQueries.integer(request,"cursor",0,0,end);start=cursor;
             int unsupported=0;
@@ -35,12 +42,15 @@ final class MapQueries {
                 ListTag palette=states.getListOrEmpty("palette");
                 int sy=section.getIntOr("Y",0)*16;
                 if(sy>maxY || sy+15<minY){work++;cursor=(sectionIndex+1)*4096;continue;}
-                boolean[] matching=new boolean[palette.size()];boolean any=false;
+                boolean[] matching=new boolean[palette.size()];boolean any=false,unsupportedPalette=palette.isEmpty();
                 for(int p=0;p<palette.size();p++) {
-                    CompoundTag state=palette.getCompoundOrEmpty(p);
+                    if(!(palette.get(p) instanceof CompoundTag state) || !(state.get("Name") instanceof StringTag)
+                            || (state.get("Properties")!=null && !(state.get("Properties") instanceof CompoundTag))) {
+                        unsupportedPalette=true;break;
+                    }
                     matching[p]=matches(state,filter,properties);any|=matching[p];
                 }
-                if(palette.isEmpty()){work++;unsupported++;cursor=(sectionIndex+1)*4096;continue;}
+                if(unsupportedPalette){work++;unsupported++;cursor=(sectionIndex+1)*4096;continue;}
                 if(!any){work++;skipped++;cursor=(sectionIndex+1)*4096;continue;}
                 long[] data=states.getLongArray("data").orElseGet(()->new long[0]);
                 while(index<4096 && work<budget && results.size()<limit) {
@@ -56,6 +66,8 @@ final class MapQueries {
                 }
             }
             out.addProperty("unsupported_sections",unsupported);
+            out.addProperty("coverage_status",unsupported>0?"unknown":cursor>=end?"complete_within_reported_sections":"partial");
+            if(unsupported>0)out.addProperty("unknown_reason","One or more requested sections have no supported block-state palette; their contents are unknown");
             out.addProperty("scope","one_saved_chunk");
         } else {
             int radius=WorldQueries.integer(request,"radius",16,1,256),width=radius*2+1,height=maxY-minY+1;
@@ -135,8 +147,10 @@ final class MapQueries {
             out.addProperty("radius",radius);out.addProperty("source","live_server_blocks");
         }
         out.addProperty("min_y",minY);out.addProperty("max_y",maxY);out.add("results",results);out.addProperty("returned",results.size());
-        out.addProperty("cursor",anchorOrder?-start-1:start);out.addProperty("scan_complete",cursor>=end);out.addProperty("total_positions",end);
+        out.addProperty("cursor",anchorOrder?-start-1:start);out.addProperty("traversal_complete",cursor>=end);out.addProperty("scan_complete",cursor>=end && !out.has("unknown_reason"));out.addProperty("total_positions",end);
         out.addProperty("visited_positions",cursor-start);out.addProperty("scanned_blocks",scanned);out.addProperty("work_units",work);
+        out.addProperty("resume_supported",cursor<end);
+        if(cursor>=end && out.has("unknown_reason"))out.addProperty("resume_reason","Unsupported saved sections cannot be recovered by another cursor page");
         out.addProperty("palette_sections_skipped",skipped);if(cursor<end)out.addProperty("next_cursor",anchorOrder?-cursor-1:cursor);
         out.addProperty("pagination_consistency","live_or_saved_record_can_change_compare_tick_or_record_sha256");return out;
     }

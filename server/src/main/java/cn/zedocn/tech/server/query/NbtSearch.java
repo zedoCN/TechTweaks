@@ -8,7 +8,7 @@ final class NbtSearch {
     private record Pending(Tag tag,String path,String key,int depth) {}
     private NbtSearch() {}
     static void search(Tag root,String path,String filter,int offset,int limit,JsonObject out) {
-        var pending=new ArrayDeque<Pending>();pending.push(new Pending(root,path,"",0));
+        var pending=new ArrayDeque<Pending>();pending.push(new Pending(root,"","",0));
         var rows=new ArrayList<JsonObject>();int scanned=0;boolean complete=true;
         while(!pending.isEmpty()) {
             if(scanned++>=8192){complete=false;break;}
@@ -17,7 +17,9 @@ final class NbtSearch {
             else if(tag instanceof CollectionTag collection)preview="list/array("+collection.size()+")";
             else preview=tag.toString();
             if(WorldQueries.matches(filter.toLowerCase(Locale.ROOT),value.key(),preview)) {
-                JsonObject row=new JsonObject();row.addProperty("path",value.path());row.addProperty("nbt_type",tag.getId());
+                JsonObject row=new JsonObject();
+                row.addProperty("path",value.path());row.addProperty("relative_path",value.path());
+                row.addProperty("path_scope","selected_value_relative");row.addProperty("nbt_type",tag.getId());
                 row.addProperty("preview",preview.substring(0,Math.min(512,preview.length())));
                 row.addProperty("preview_truncated",preview.length()>512);rows.add(row);
             }
@@ -34,6 +36,11 @@ final class NbtSearch {
                 for(int i=count-1;i>=0;i--)pending.push(new Pending(collection.get(i),value.path()+"["+i+"]",Integer.toString(i),value.depth()+1));
             }
         }
+        out.addProperty("selected_path",path);
+        if(!out.has("selected_match"))out.addProperty("selected_match",0);
+        if(!out.has("selected_matches"))out.addProperty("selected_matches",1);
+        out.addProperty("path_semantics","select selected_path at selected_match first; row paths are relative to that value, not unique root addresses");
+        if(!complete)out.addProperty("scan_incomplete_reason","NBT node, pending-entry or depth limit reached; narrow a known path, changing filter does not resume traversal");
         out.addProperty("find",filter);out.addProperty("scan_complete",complete);out.addProperty("scanned",Math.min(scanned,8192));
         WorldQueries.page(out,rows,offset,limit);
     }

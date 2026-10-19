@@ -48,6 +48,7 @@ final class Ae2Queries {
             out.addProperty("crafting_cpu_count",grid.getCraftingService().getCpus().size());return out;
         }
         List<JsonObject> rows=new ArrayList<>();boolean complete=true;int scanned=0;
+        int unsupportedOwners=0,unavailableLevels=0,unloadedNodes=0,locatedNodes=0;
         if(query.equals("ae2.items")) {
             if(!node.isActive())throw new IllegalArgumentException("AE2 anchor is offline; current network inventory is unavailable");
             out.addProperty("source","ae2_cached_inventory");
@@ -78,8 +79,10 @@ final class Ae2Queries {
                 Object owner=member.getOwner();BlockEntity ownerBe=null;String ownerSide="block";
                 if(owner instanceof BlockEntity block)ownerBe=block;
                 else if(owner instanceof AEBasePart part){ownerBe=part.getBlockEntity();ownerSide=part.getSide()==null?"main":part.getSide().toString().toLowerCase(Locale.ROOT);}
-                if(ownerBe==null || !(ownerBe.getLevel() instanceof ServerLevel ownerLevel))continue;
-                if(ownerLevel.getChunkSource().getChunkNow(ownerBe.getBlockPos().getX()>>4,ownerBe.getBlockPos().getZ()>>4)==null)continue;
+                if(ownerBe==null){unsupportedOwners++;continue;}
+                if(!(ownerBe.getLevel() instanceof ServerLevel ownerLevel)){unavailableLevels++;continue;}
+                if(ownerLevel.getChunkSource().getChunkNow(ownerBe.getBlockPos().getX()>>4,ownerBe.getBlockPos().getZ()>>4)==null){unloadedNodes++;continue;}
+                locatedNodes++;
                 JsonObject location=WorldQueries.position(ownerBe.getBlockPos());location.addProperty("dimension",ownerLevel.dimension().identifier().toString());
                 location.addProperty("side",ownerSide);location.addProperty("id",owner instanceof AEBasePart part?IPartItem.getId(part.getPartItem()).toString():BuiltInRegistries.BLOCK.getKey(ownerBe.getBlockState().getBlock()).toString());
                 location.addProperty("active",member.isActive());location.addProperty("powered",member.isPowered());
@@ -117,7 +120,19 @@ final class Ae2Queries {
                 }
             }
         } else throw new IllegalArgumentException("Unknown AE2 query");
-        rows.sort(Comparator.comparing(JsonObject::toString));out.addProperty("scan_complete",complete);out.addProperty("scanned",scanned);
+        rows.sort(Comparator.comparing(JsonObject::toString));out.addProperty("scan_complete",complete);
+        out.addProperty("scanned",Math.min(scanned,query.equals("ae2.items")?16384:8192));
+        if(query.equals("ae2.nodes") || query.equals("ae2.interfaces") || query.equals("ae2.patterns")) {
+            out.addProperty("scope","ae2_locatable_loaded_grid_nodes");
+            out.addProperty("unsupported_owner_nodes_skipped",unsupportedOwners);
+            out.addProperty("unavailable_level_nodes_skipped",unavailableLevels);
+            out.addProperty("unloaded_nodes_skipped",unloadedNodes);out.addProperty("located_nodes",locatedNodes);
+            boolean covered=complete && unsupportedOwners==0 && unavailableLevels==0 && unloadedNodes==0;
+            out.addProperty("node_coverage_complete",covered);
+            out.addProperty("coverage_status",covered?"complete_within_reported_scope":"partial");
+            out.addProperty("node_counts_note","network_nodes is the native grid size; located_nodes is before query-type/filter selection; skipped nodes are unknown");
+        }
+        if(!complete)out.addProperty("scan_incomplete_reason","AE2 node, inventory-key or result budget reached; offset pages only the observed prefix and filter does not resume traversal");
         WorldQueries.page(out,rows,offset,limit);return out;
     }
     private static JsonArray inventory(GenericStackInv inventory,ServerLevel level) {
