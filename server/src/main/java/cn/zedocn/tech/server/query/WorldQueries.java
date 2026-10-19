@@ -177,6 +177,7 @@ public final class WorldQueries {
             int radius = integer(request,"radius",64,1,256), scanned=0, loaded=0, unloaded=0;
             boolean complete = true;
             List<JsonObject> rows = new ArrayList<>();
+            var distances=new IdentityHashMap<JsonObject,Double>();
             outer: for (int cx=(pos.getX()-radius)>>4;cx<=(pos.getX()+radius)>>4;cx++) {
                 for (int cz=(pos.getZ()-radius)>>4;cz<=(pos.getZ()+radius)>>4;cz++) {
                     var chunk=level.getChunkSource().getChunkNow(cx,cz);
@@ -188,11 +189,15 @@ public final class WorldQueries {
                         String id=BuiltInRegistries.BLOCK.getKey(be.getBlockState().getBlock()).toString();
                         if (!matches(filter,id,be.getType().toString())) continue;
                         JsonObject row=position(bp); row.addProperty("id",id);
-                        row.addProperty("block_entity",BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType()).toString()); rows.add(row);
+                        row.addProperty("block_entity",BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType()).toString());
+                        double dx=(double)bp.getX()-pos.getX(),dy=(double)bp.getY()-pos.getY(),dz=(double)bp.getZ()-pos.getZ();
+                        double distanceSquared=dx*dx+dy*dy+dz*dz;
+                        row.addProperty("distance_squared",distanceSquared);distances.put(row,distanceSquared);rows.add(row);
                     }
                 }
             }
-            rows.sort(Comparator.comparing(JsonObject::toString));
+            rows.sort(Comparator.<JsonObject>comparingDouble(distances::get).thenComparing(JsonObject::toString));
+            out.addProperty("order","distance_squared_ascending_then_row_json");
             out.addProperty("scope","block_entities_in_loaded_chunks_horizontal_square");
             out.addProperty("scan_complete",complete); out.addProperty("scanned",Math.min(scanned,MAX_SCAN));
             out.addProperty("loaded_chunks",loaded); out.addProperty("unloaded_chunks_skipped",unloaded);

@@ -45,6 +45,37 @@ class WorldQueryContractsTest {
         }
         JsonObject read(String json)throws Exception{return WorldQueries.execute(source,JsonParser.parseString(json).getAsJsonObject());}
     }
+    @Test void nearestBlockEntityIsNotHiddenByLexicographicPrefixAndDistanceTiesAreStable()throws Exception{
+        var f=new Fixture();var cache=mock(net.minecraft.server.level.ServerChunkCache.class);
+        when(f.level.getChunkSource()).thenReturn(cache);
+        var chunks=new HashMap<String,net.minecraft.world.level.chunk.LevelChunk>();
+        var entries=new LinkedHashMap<net.minecraft.core.BlockPos,net.minecraft.world.level.block.entity.BlockEntity>();
+        for(int x=-590;x<=-568;x++)for(int z=3110;z<=3112;z++)
+            entries.put(new net.minecraft.core.BlockPos(x,50,z),null);
+        var nearest=new net.minecraft.core.BlockPos(-591,110,3111);entries.put(nearest,null);
+        entries.put(new net.minecraft.core.BlockPos(-591,114,3111),null);
+        var type=net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE.getValue(Identifier.parse("minecraft:chest"));
+        var byChunk=new HashMap<String,Map<net.minecraft.core.BlockPos,net.minecraft.world.level.block.entity.BlockEntity>>();
+        for(var position:entries.keySet()){
+            var be=mock(net.minecraft.world.level.block.entity.BlockEntity.class);
+            when(be.getBlockPos()).thenReturn(position);doReturn(type).when(be).getType();
+            when(be.getBlockState()).thenReturn(net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState());
+            byChunk.computeIfAbsent((position.getX()>>4)+","+(position.getZ()>>4),key->new LinkedHashMap<>()).put(position,be);
+        }
+        for(var chunk:byChunk.entrySet()){
+            var loaded=mock(net.minecraft.world.level.chunk.LevelChunk.class);when(loaded.getBlockEntities()).thenReturn(chunk.getValue());
+            chunks.put(chunk.getKey(),loaded);
+        }
+        when(cache.getChunkNow(anyInt(),anyInt())).thenAnswer(call->chunks.get(call.getArgument(0)+","+call.getArgument(1)));
+        String request="{\"query\":\"blocks\",\"x\":-591,\"y\":112,\"z\":3111,\"radius\":24,\"limit\":1";
+        var first=f.read(request+"}");var row=first.getAsJsonArray("results").get(0).getAsJsonObject();
+        assertEquals(-591,row.get("x").getAsInt());assertEquals(110,row.get("y").getAsInt());
+        assertEquals(4.0,row.get("distance_squared").getAsDouble());assertEquals(71,first.get("matched").getAsInt());
+        assertEquals("distance_squared_ascending_then_row_json",first.get("order").getAsString());
+        assertTrue(first.get("truncated").getAsBoolean());assertEquals(1,first.get("next_offset").getAsInt());
+        var second=f.read(request+",\"offset\":1}").getAsJsonArray("results").get(0).getAsJsonObject();
+        assertEquals(114,second.get("y").getAsInt());assertEquals(4.0,second.get("distance_squared").getAsDouble());
+    }
     @Test void entitySearchUsesLoadedSpatialCandidatesInsteadOfGlobalPrefix()throws Exception{
         var f=new Fixture();Entity target=f.entity();
         doAnswer(call->{
