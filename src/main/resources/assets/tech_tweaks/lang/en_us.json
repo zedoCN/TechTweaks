@@ -3,5 +3,13 @@
   "block.tech_tweaks.vault_controller": "Vault Automation Controller",
   "block.tech_tweaks.environment_controller": "Environment Controller",
   "block.tech_tweaks.protection_controller": "Spawn Suppression Controller",
-  "block.tech_tweaks.meteor_guide_rod": "Meteor Guide Rod"
+  "block.tech_tweaks.meteor_guide_rod": "Meteor Guide Rod",
+  "item.tech_tweaks.virtual_link_cutter": "Virtual Link Cutter",
+  "item.tech_tweaks.virtual_link_cutter.desc": "Right-click both wire or pipe endpoints to cut their virtual link. Sneak-right-click to cancel.",
+  "message.tech_tweaks.link_selected": "Selected %s. Right-click the other endpoint.",
+  "message.tech_tweaks.link_cancelled": "Endpoint selection cancelled.",
+  "message.tech_tweaks.link_mismatch": "Select two wire endpoints or two pipe endpoints in the same dimension. Please start again.",
+  "message.tech_tweaks.link_unavailable": "The first endpoint was removed, is unloaded, or cannot be edited. Please start again.",
+  "message.tech_tweaks.link_missing": "There is no virtual link between these endpoints.",
+  "message.tech_tweaks.link_removed": "Removed the selected virtual link."
 }

@@ -11,8 +11,17 @@
     "VaultStateMixin",
     "VaultDataAccess",
     "CuriosOpenMixin",
-    "MeteorSpawnMixin"
+    "MeteorSpawnMixin",
+    "PlasmaForgeAutomationMixin",
+    "FusionBreederAutomationMixin",
+    "AeCraftingGridMixin",
+    "FluidTankAutomationMixin",
+    "OrbusAutomationMixin",
+    "TankFirstFluidTransactionMixin",
+    "TankFluidFaceMixin",
+    "FluidTankNativeAccess"
   ],
+  "client": ["AeJeiCraftingGridMixin"],
   "injectors": {
     "defaultRequire": 1
   }

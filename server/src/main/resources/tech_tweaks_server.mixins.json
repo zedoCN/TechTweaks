@@ -5,7 +5,8 @@
   "mixins": [
     "PipezItemMixin",
     "OilSurfaceMixin",
-    "FallingLeafMixin"
+    "FallingLeafMixin",
+    "FakeClientConnectionMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -3,5 +3,13 @@
   "block.tech_tweaks.vault_controller": "宝库自动化控制器",
   "block.tech_tweaks.environment_controller": "时间／天气控制器",
   "block.tech_tweaks.protection_controller": "区域抑制控制器",
-  "block.tech_tweaks.meteor_guide_rod": "陨石引导针"
+  "block.tech_tweaks.meteor_guide_rod": "陨石引导针",
+  "item.tech_tweaks.virtual_link_cutter": "虚拟连接断开器",
+  "item.tech_tweaks.virtual_link_cutter.desc": "依次右键两个电缆／管道端点，断开它们的虚拟连接；潜行右键取消选择。",
+  "message.tech_tweaks.link_selected": "已选起点 %s，请右键另一端点。",
+  "message.tech_tweaks.link_cancelled": "已取消端点选择。",
+  "message.tech_tweaks.link_mismatch": "两个端点必须位于同一维度，且同为电缆或管道端点。请重新选择。",
+  "message.tech_tweaks.link_unavailable": "起点已移除、未加载或不可操作，请重新选择。",
+  "message.tech_tweaks.link_missing": "这两个端点之间没有虚拟连接。",
+  "message.tech_tweaks.link_removed": "已断开指定虚拟连接。"
 }

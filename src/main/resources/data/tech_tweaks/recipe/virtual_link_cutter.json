@@ -1,0 +1,6 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": ["minecraft:shears", "minecraft:redstone"],
+  "result": {"id": "tech_tweaks:virtual_link_cutter", "count": 1}
+}

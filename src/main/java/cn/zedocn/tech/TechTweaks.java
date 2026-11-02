@@ -29,13 +29,14 @@ public final class TechTweaks {
     public static final DeferredBlock<ControllerBlock> VAULT = block("vault_controller", ControllerKind.VAULT);
     public static final DeferredBlock<ControllerBlock> ENVIRONMENT = block("environment_controller", ControllerKind.ENVIRONMENT);
     public static final DeferredBlock<ControllerBlock> PROTECTION = block("protection_controller", ControllerKind.PROTECTION);
+    public static final DeferredItem<VirtualLinkCutterItem> LINK_CUTTER = ITEMS.registerItem("virtual_link_cutter", VirtualLinkCutterItem::new);
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ControllerBlockEntity>> ENTITY = ENTITIES.register("controller", () -> new BlockEntityType<>(ControllerBlockEntity::new, TRIAL.get(), VAULT.get(), ENVIRONMENT.get(), PROTECTION.get()));
     public static final DeferredHolder<MenuType<?>, MenuType<ControllerMenu>> MENU = MENUS.register("controller", () -> new MenuType<>(ControllerMenu::new, FeatureFlags.DEFAULT_FLAGS));
     public static final DeferredBlock<MeteorGuideRodBlock> METEOR_ROD = BLOCKS.registerBlock("meteor_guide_rod", MeteorGuideRodBlock::new, props -> props.noOcclusion().strength(3F,6F).sound(net.minecraft.world.level.block.SoundType.COPPER).requiresCorrectToolForDrops());
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MeteorGuideRodBlockEntity>> METEOR_ROD_ENTITY = ENTITIES.register("meteor_guide_rod", () -> new BlockEntityType<>(MeteorGuideRodBlockEntity::new, METEOR_ROD.get()));
     static {
         ITEMS.registerSimpleBlockItem(METEOR_ROD);
-        TABS.register("controllers", () -> CreativeModeTab.builder().title(Component.literal("TECH 自动化")).icon(() -> TRIAL.get().asItem().getDefaultInstance()).displayItems((p,o) -> { o.accept(TRIAL.get()); o.accept(VAULT.get()); o.accept(ENVIRONMENT.get()); o.accept(PROTECTION.get()); o.accept(METEOR_ROD.get()); }).build());
+        TABS.register("controllers", () -> CreativeModeTab.builder().title(Component.literal("TECH 自动化")).icon(() -> TRIAL.get().asItem().getDefaultInstance()).displayItems((p,o) -> { o.accept(TRIAL.get()); o.accept(VAULT.get()); o.accept(ENVIRONMENT.get()); o.accept(PROTECTION.get()); o.accept(METEOR_ROD.get()); o.accept(LINK_CUTTER.get()); }).build());
     }
     private static DeferredBlock<ControllerBlock> block(String name, ControllerKind kind) {
         var b = BLOCKS.registerBlock(name, props -> new ControllerBlock(kind, props), props -> props.strength(3.5F).requiresCorrectToolForDrops());
