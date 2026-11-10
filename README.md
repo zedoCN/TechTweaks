@@ -2,6 +2,23 @@
 
 服务于 TECH 的 Minecraft 26.2 / NeoForge 26.2.0.88 扩展模组。当前双端构建 0.1.9，客户端和服务端都需要安装；服务端模块为 0.1.4，仅服务器安装。0.1.9 已于 2026-10-25 部署 TECH 正式服及客户端两条更新通道；各版本验证记录按日期保留。
 
+## 假人内存修复：适用范围与源码
+
+如果你是来看假人内存积压修复的，相关代码在服务端模块：
+
+- [替换 SiliconeDolls 假人通道的 Mixin](server/src/main/java/cn/zedocn/tech/server/mixin/FakeClientConnectionMixin.java)
+- [立即释放出站消息的 ClientlessChannel](server/src/main/java/cn/zedocn/tech/server/network/ClientlessChannel.java)
+- [网络与引用计数回归测试](server/src/test/java/cn/zedocn/tech/server/network/FakeClientConnectionTest.java)
+
+本仓库是 TECH 自用扩展模组，包含玩法、性能与查询功能；不是 SiliconeDolls 或 Curtain 的 Fork。
+该修复针对 **Minecraft 26.2 / NeoForge 26.2.0.88 / SiliconeDolls 1.0.0+build.67** 的假人连接，
+服务端模块版本为 **0.1.4**，仅服务器安装。精确依赖及构建方法见下方“构建”。
+**不要把这个 JAR 安装到 Minecraft 1.20.1 / Forge / Curtain（窗帘）环境**；这份代码没有修补 Curtain。
+
+问题是 HBM 绕过普通发包方法，直接写入假人的 Netty EmbeddedChannel；没有客户端消费的出站队列会持续持有消息。
+修复在出站回调中释放该回调拥有的引用，保留 Netty 对原始写入引用的释放流程，避免重复释放共享缓冲。
+历史验证与部署范围见下方“假人网络缓冲释放（服务端 0.1.4）”。
+
 ## 模块划分与在线备份
 
 同一仓库构建两个 JAR：
@@ -121,7 +138,7 @@ SiliconeDolls 的普通发包会忽略客户端消息，但 HBM 直接写入底�
 ./gradlew test jar sourcesJar :server:test :server:jar :server:sourcesJar
 ```
 
-输出：`build/libs/tech-tweaks-0.1.6.jar`、`server/build/libs/tech-tweaks-server-0.1.4.jar` 及各自源码 JAR。NeoForge JUnit 检查会加载真实 Minecraft／NTM／Curios／Pipez Mixin，包含两组共 2,000 个随机库存场景与原单件算法的结果对照，以及水面、树冠、屋顶和空列的实际 NTM 方法验证。单元测试不替代完整客户端验收。
+输出：`build/libs/tech-tweaks-0.1.9.jar`、`server/build/libs/tech-tweaks-server-0.1.4.jar` 及各自源码 JAR。NeoForge JUnit 检查会加载真实 Minecraft／NTM／Curios／Pipez Mixin，包含两组共 2,000 个随机库存场景与原单件算法的结果对照，以及水面、树冠、屋顶和空列的实际 NTM 方法验证。单元测试不替代完整客户端验收。
 
 `python3 scripts/verify-performance.py` 启动独立的 `runs/performance-verification/` 测试世界，游戏和临时 RCON 均只绑定 loopback；验证真实 Pipez 的混合物品与余数、批量计数、机器拒收时的重复探测消除与物品保留，以及落叶／砂子／方块数据／活塞占位边界后正常停服。它不读取生产存档。世界与日志保持 Git 忽略；重复运行只清理带本脚本标记的测试世界。可用 `TECH_TEST_JAVA_PATHS` 向 Gradle 指定已安装 JDK 路径。
 
